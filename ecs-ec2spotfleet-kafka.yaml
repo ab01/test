@@ -1,0 +1,555 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  ClusterName:
+        Description: An cluster name that will be prefixed to resource names
+        Type: String
+        Default: dev
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instances
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: awsmeter
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: Select a VPC that allows instances to access the Internet.
+    Default: vpc-ffce1798
+  PublicSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Select public subnets in your VPC for internet facing
+    Default: subnet-6b019746,subnet-00084558
+  DesiredCapacity:
+    Type: Number
+    Default: '2'
+    Description: Number of instances to launch in your ECS cluster.
+  MinSize:
+    Type: Number
+    Default: '1'
+    Description: Minimum number of instances that can be launched in your ECS cluster.
+  MaxSize:
+    Type: Number
+    Default: '4'
+    Description: Maximum number of instances that can be launched in your ECS cluster.
+  EBSVolumeSize:
+    Type: Number
+    Default: '10'
+    Description: EBS Volume Size.
+  EcsSecurityGroup:
+    Description: Enter the name SG to be attached
+    Type: String
+    Default: 'sg-1d59a366'
+  ECR:
+    Description: Enter the name image from ecr
+    Type: String
+    Default: '443377047944.dkr.ecr.us-west-2.amazonaws.com/kafka_connect:latest'
+    
+  InstanceType01:
+    Description: Main ECS instance type
+    Type: String
+    Default: 'm3.xlarge'
+    AllowedValues:
+    - t2.small
+    - t2.medium
+    - c3.large
+    - c3.2xlarge
+    - c4.large
+    - c4.xlarge
+    - c4.2xlarge
+    - i2.xlarge
+    - m1.small
+    - m1.medium
+    - m1.large
+    - m3.medium
+    - m3.large
+    - m3.xlarge
+    - m4.large
+    - m4.xlarge
+    - m4.2xlarge
+    - r3.large
+    - r3.xlarge
+    - r3.2xlarge
+    - r4.large
+    - r4.xlarge
+    - r4.2xlarge
+    - i3.xlarge
+    ConstraintDescription: Grab any available instance type in the spot market
+  InstanceType02:
+    Description: Main ECS instance type
+    Type: String
+    Default: 'm4.xlarge'
+    AllowedValues:
+    - t2.small
+    - t2.medium
+    - c3.large
+    - c3.2xlarge
+    - c4.large
+    - c4.xlarge
+    - c4.2xlarge
+    - i2.xlarge
+    - m1.medium
+    - m1.large
+    - m3.medium
+    - m3.large
+    - m3.xlarge
+    - m4.large
+    - m4.xlarge
+    - m4.2xlarge
+    - r3.large
+    - r3.xlarge
+    - r3.2xlarge
+    - r4.large
+    - r4.xlarge
+    - r4.2xlarge
+    - i3.xlarge
+    ConstraintDescription: Grab any available instance type in the spot market
+  InstanceType03:
+    Description: Main ECS instance type
+    Type: String
+    Default: 'm4.xlarge'
+    AllowedValues:
+    - t2.small
+    - t2.medium
+    - c3.large
+    - c3.2xlarge
+    - c4.large
+    - c4.xlarge
+    - c4.2xlarge
+    - i2.xlarge
+    - m1.medium
+    - m1.large
+    - m3.medium
+    - m3.large
+    - m3.xlarge
+    - m4.large
+    - m4.xlarge
+    - m4.2xlarge
+    - r3.large
+    - r3.xlarge
+    - r3.2xlarge
+    - r4.large
+    - r4.xlarge
+    - r4.2xlarge
+    - i3.xlarge
+    ConstraintDescription: Grab any available instance type in the spot market
+  EC2GlobalSpotPrice:
+    Description: Spot price for application AutoScaling Group
+    Type: Number
+    Default: '0.0420'
+  EC2Instance01SpotPrice:
+    Description: Spot price for application AutoScaling Group
+    Type: Number
+    Default: '0.0420'
+  EC2Instance02SpotPrice:
+    Description: Spot price for application AutoScaling Group
+    Type: Number
+    Default: '0.0420'
+  EC2Instance03SpotPrice:
+    Description: Spot price for application AutoScaling Group
+    Type: Number
+    Default: '0.0420'
+  Name:
+    Default: <Name>
+    Description: Tag used for Name of the resource
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+  Owner:
+    Default: <Owner>
+    Description: Tag used for the owner of the resource created (email address).
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+  ServerType:
+    Default: <ServerType>
+    Description: Tag used for service type whether it is was or something
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+  Service:
+    Default: <Service>
+    Description: Tag used for service associated with resource.
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+  Stage:
+    AllowedValues:
+    - dev
+    - qa
+    - stg
+    - prd
+    - test
+    Default: dev
+    Description: Tag used for environment associated with resource.
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+  AppContainerPort:
+    Description: Conatiner Port for Task Definition
+    Type: Number
+    Default: '8083'
+  AppHostPort:
+    Description: Host Port for Task Definition
+    Type: Number
+    Default: '8083'
+  AppMemValue:
+    Description: Memory in MB for running Kafka_Connect Containers
+    Type: Number
+    Default: '10000'
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: Instance Settings
+      Parameters:
+      - InstanceType01
+      - InstanceType02
+      - InstanceType03
+      - EBSVolumeSize
+      - KeyName
+      - EcsSecurityGroup
+    - Label:
+        default: Container Settings
+      Parameters:
+      - ClusterName
+      - ECR
+      - AppContainerPort
+      - AppHostPort
+      - AppMemValue
+      - DesiredCapacity
+      - MaxSize
+      - MinSize
+    - Label:
+        default: Spot Price for EC2 SpotFleet Launch Specifications
+      Parameters:
+      - EC2GlobalSpotPrice
+      - EC2Instance01SpotPrice
+      - EC2Instance02SpotPrice
+      - EC2Instance03SpotPrice
+    - Label:
+        default: Network Settings
+      Parameters:
+      - VpcId
+      - PublicSubnets
+    - Label:
+        default: Tags
+      Parameters:
+      - Name
+      - Owner
+      - ServerType
+      - Service
+      - Stage    
+Mappings:
+  AWSRegionToAMI:
+    us-east-1:
+      AMIID: ami-b2a445a4
+    us-east-2:
+      AMIID: ami-446f3521
+    us-west-1:
+      AMIID: ami-689bc208
+    us-west-2:
+      AMIID: ami-af8b30cf
+    eu-west-1:
+      AMIID: ami-a1491ad2
+    eu-central-1:
+      AMIID: ami-54f5303b
+    ap-northeast-1:
+      AMIID: ami-9cd57ffd
+    ap-southeast-1:
+      AMIID: ami-a900a3ca
+    ap-southeast-2:
+      AMIID: ami-5781be34
+Resources:
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Ref 'ClusterName'
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    DependsOn: ECSServiceRole
+    Properties:
+      ContainerDefinitions:
+      - Name: kafka
+        Memory: !Ref 'AppMemValue'
+        Essential: true
+        Image: !Ref 'ECR'
+        PortMappings: 
+          - 
+            ContainerPort: 
+              Ref: "AppContainerPort"
+            HostPort: 
+              Ref: "AppHostPort"
+        Environment:
+        - Name: CONNECT_AWS_ACCESS_KEY
+          Value: XXXXXXXXXXXXXXXXXXX
+        - Name: CONNECT_AWS_SECRET_KEY
+          Value: XXXXXXXXXXXXXXXXXXXXXXX
+        - Name: CONNECT_BOOTSTRAP_SERVERS
+          Value: 172.31.46.31:9092
+        - Name: CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL
+          Value: 172.31.25.0:8081
+        - Name: CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL
+          Value: 172.31.25.0:8081
+  kafkaService:
+    Type: AWS::ECS::Service
+    DependsOn:
+    - SpotFleet
+    Properties:
+      Cluster: !Ref 'Cluster'
+      DesiredCount: !Ref 'DesiredCapacity'
+      TaskDefinition: !Ref 'TaskDefinition'
+  SpotFleet:
+    Type: AWS::EC2::SpotFleet
+    Properties:
+      SpotFleetRequestConfigData:
+        IamFleetRole: !GetAtt IAMFleetRole.Arn
+        SpotPrice: !Ref 'EC2GlobalSpotPrice'
+        TargetCapacity: !Ref 'DesiredCapacity'
+        TerminateInstancesWithExpiration: false
+        AllocationStrategy: diversified
+        LaunchSpecifications:
+          - InstanceType:  !Ref 'InstanceType01'
+            IamInstanceProfile:
+              Arn: !GetAtt 'EC2InstanceProfile.Arn'
+            ImageId: !FindInMap [ AWSRegionToAMI, !Ref 'AWS::Region', AMIID]
+            SubnetId: !Join [ ',', !Ref 'PublicSubnets' ]
+            KeyName: !Ref 'KeyName'
+            Monitoring:
+              Enabled: 'true'
+            UserData:
+              Fn::Base64: !Sub |
+                #!/bin/bash -xe
+                yum install -y aws-cfn-bootstrap aws-cli nfs-utils wget git vim
+                echo ECS_CLUSTER=${Cluster} >> /etc/ecs/ecs.config
+                /usr/bin/aws ec2 create-tags --region ${AWS::Region} --resources $INSTANCE_ID --tags "Key=Name,Value=${Name}" "Key=Owner,Value=${Owner}" "Key=ServerType,Value=${ServerType}" "Key=Service,Value=${Service}" "Key=Stage,Value=${Stage}"
+                /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --region ${AWS::Region} --resource LaunchSpecifications
+                /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource LaunchSpecifications
+            SecurityGroups: 
+              - GroupId: !Ref 'EcsSecurityGroup'
+            BlockDeviceMappings:
+                - DeviceName: "/dev/xvda"
+                  Ebs:
+                    VolumeSize: !Ref 'EBSVolumeSize'
+            SubnetId: !Join [ ',', !Ref 'PublicSubnets' ]
+            SpotPrice: !Ref 'EC2Instance01SpotPrice'
+          - InstanceType: !Ref 'InstanceType02'
+            IamInstanceProfile: 
+              Arn: !GetAtt 'EC2InstanceProfile.Arn'
+            ImageId: !FindInMap [ AWSRegionToAMI, !Ref 'AWS::Region', AMIID]
+            KeyName: !Ref 'KeyName'
+            Monitoring:
+              Enabled: 'true'
+            UserData:
+              Fn::Base64: !Sub |
+                #!/bin/bash -xe
+                echo ECS_CLUSTER=${Cluster} >> /etc/ecs/ecs.config
+                yum install -y aws-cfn-bootstrap aws-cli nfs-utils wget git vim
+                INSTANCE_ID=$(curl -S http://169.254.169.254/latest/meta-data/instance-id)
+                /usr/bin/aws ec2 create-tags --region ${AWS::Region} --resources $INSTANCE_ID --tags "Key=Name,Value=${Name}" "Key=Owner,Value=${Owner}" "Key=ServerType,Value=${ServerType}" "Key=Service,Value=${Service}" "Key=Stage,Value=${Stage}"
+                /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --region ${AWS::Region} --resource LaunchSpecifications
+                /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource LaunchSpecifications
+            SecurityGroups: 
+              - GroupId: !Ref 'EcsSecurityGroup'
+            BlockDeviceMappings:
+                - DeviceName: "/dev/xvda"
+                  Ebs:
+                    VolumeSize: !Ref 'EBSVolumeSize'
+            SubnetId: !Join [ ',', !Ref 'PublicSubnets' ]
+            SpotPrice: !Ref 'EC2Instance02SpotPrice'
+          - InstanceType: !Ref 'InstanceType03'
+            IamInstanceProfile: 
+              Arn: !GetAtt 'EC2InstanceProfile.Arn'
+            ImageId: !FindInMap [ AWSRegionToAMI, !Ref 'AWS::Region', AMIID]
+            KeyName: !Ref 'KeyName'
+            Monitoring:
+              Enabled: 'true'
+            UserData:
+              Fn::Base64: !Sub |
+                #!/bin/bash -xe
+                echo ECS_CLUSTER=${Cluster} >> /etc/ecs/ecs.config
+                yum install -y aws-cfn-bootstrap aws-cli nfs-utils wget git vim
+                INSTANCE_ID=$(curl -S http://169.254.169.254/latest/meta-data/instance-id)
+                /usr/bin/aws ec2 create-tags --region ${AWS::Region} --resources $INSTANCE_ID --tags "Key=Name,Value=${Name}" "Key=Owner,Value={Owner}" "Key=ServerType,Value=${ServerType}" "Key=Service,Value=${Service}" "Key=Stage,Value=${Stage}"
+                /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --region ${AWS::Region} --resource LaunchSpecifications
+                /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource LaunchSpecifications
+            SecurityGroups: 
+              - GroupId: !Ref 'EcsSecurityGroup'
+            BlockDeviceMappings:
+                - DeviceName: "/dev/xvda"
+                  Ebs:
+                    VolumeSize: !Ref 'EBSVolumeSize'
+            SubnetId: !Join [ ',', !Ref 'PublicSubnets' ]
+            SpotPrice: !Ref 'EC2Instance03SpotPrice'
+  FleetScalingTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    DependsOn: SpotFleet
+    Properties:
+      MaxCapacity: !Ref 'MaxSize'
+      MinCapacity: !Ref 'MinSize'
+      ResourceId: !Join ['', [spot-fleet-request/, !Ref 'SpotFleet']]
+      RoleARN: !GetAtt [AutoscalingRole, Arn]
+      ScalableDimension: ec2:spot-fleet-request:TargetCapacity
+      ServiceNamespace: ec2
+  FleetScalingUpPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: SpotFleetScaleUp
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref 'FleetScalingTarget'
+      StepScalingPolicyConfiguration:
+        AdjustmentType: ChangeInCapacity
+        Cooldown: 60
+        MetricAggregationType: Average
+        StepAdjustments:
+        - MetricIntervalLowerBound: 0
+          ScalingAdjustment: 1
+  FleetScalingDownPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: SpotFleetScaleDown
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref 'FleetScalingTarget'
+      StepScalingPolicyConfiguration:
+        AdjustmentType: ChangeInCapacity
+        Cooldown: 60
+        MetricAggregationType: Average
+        StepAdjustments:
+        - MetricIntervalUpperBound: 0
+          ScalingAdjustment: -1
+  FleetCPUAlarmScaleUp:
+    Type: AWS::CloudWatch::Alarm
+    DependsOn: Cluster
+    Properties:
+      EvaluationPeriods: '1'
+      Statistic: Average
+      Threshold: '70'
+      ComparisonOperator: GreaterThanThreshold
+      AlarmDescription: Alarm if target instance CPU is overloaded
+      Period: '60'
+      AlarmActions: [!Ref 'FleetScalingUpPolicy']
+      Namespace: 'AWS/ECS'
+      Dimensions:
+      - Name: ClusterName
+        Value: !Ref 'Cluster'
+      MetricName: CPUUtilization
+  FleetCPUAlarmScaleDown:
+    Type: AWS::CloudWatch::Alarm
+    DependsOn: Cluster
+    Properties:
+      EvaluationPeriods: '1'
+      Statistic: Average
+      Threshold: '10'
+      ComparisonOperator: LessThanOrEqualToThreshold
+      AlarmDescription: Alarm if target instance CPU is underutlized
+      Period: '120'
+      AlarmActions: [!Ref 'FleetScalingDownPolicy']
+      Namespace: 'AWS/ECS'
+      Dimensions:
+      - Name: ClusterName
+        Value: !Ref 'Cluster'
+      MetricName: CPUUtilization
+  IAMFleetRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - spotfleet.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: EC2SpotPermissionAndPassRole
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - ec2:Describe* 
+            - ec2:DescribeSubnets
+            - ec2:RequestSpotInstances
+            - ec2:TerminateInstances
+            Resource:
+            - "*"
+          - Effect: Allow
+            Action:
+            - iam:PassRole
+            Resource:
+            - "*"
+  ECSServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ecs.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: ecs-service
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:  ['ec2:Describe*', 'ec2:AuthorizeSecurityGroupIngress']
+            Resource: "*"
+  AutoscalingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [application-autoscaling.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+      - PolicyName: service-autoscaling
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action: ['application-autoscaling:*', 'cloudwatch:DescribeAlarms', 'cloudwatch:PutMetricAlarm',
+              'ecs:DescribeServices', 'ecs:UpdateService','ec2:ModifySpotFleetRequest','ec2:DescribeSpotFleetRequests']
+            Resource: '*'
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: ecs-service
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+            - ecs:DeregisterContainerInstance
+            - ecs:DiscoverPollEndpoint
+            - ecs:Poll
+            - ecs:RegisterContainerInstance
+            - ecs:StartTelemetrySession
+            - ecs:Submit*
+            - ecs:CreateCluster
+            - ecr:BatchCheckLayerAvailability
+            - ecr:BatchGetImage
+            - ecr:GetDownloadUrlForLayer
+            - ecr:GetAuthorizationToken
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            - ec2:CreateTags
+            - ec2:Descirbe*
+            Resource: "*"
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles: [!Ref 'EC2Role']
